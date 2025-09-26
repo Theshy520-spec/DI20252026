@@ -195,12 +195,15 @@ function actualizarContador(card, accion) {
   const span = card.querySelector(".contador");
   let valor = Number(span.dataset.valor || "10");
 
-  if (accion === "mas") valor += 0.1;
-  if (accion === "menos") valor -= 0.1;
-  if (accion === "cero") valor = 0;
 
-  // Aplicar límites: 0-10
-  valor = Math.max(0, Math.min(10, valor));
+  if (btn.classList.contains("btn-mas")) {
+    valor = Math.min(10, valor + 0.1);
+  }
+  if (btn.classList.contains("btn-menos")) {
+    valor = valor - 0.1;
+  }
+  // Redondea a un decimal
+  valor = Number(valor.toFixed(1));
 
   estado.set(nombre, valor);
   span.dataset.valor = String(valor);
