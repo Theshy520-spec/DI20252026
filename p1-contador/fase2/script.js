@@ -10,6 +10,7 @@ const tpl = document.getElementById("tpl-persona");
 // Elementos para selección múltiple
 const controlesSeleccion = document.getElementById("controles-seleccion");
 const contadorSeleccionados = document.getElementById("contador-seleccionados");
+const btnSeleccionarTodos = document.getElementById("btn-seleccionar-todos");
 const btnSeleccionadosCero = document.getElementById("btn-seleccionados-cero");
 const btnSeleccionadosMas = document.getElementById("btn-seleccionados-mas");
 const btnSeleccionadosMenos = document.getElementById("btn-seleccionados-menos");
@@ -65,11 +66,26 @@ function setEstado(msg) {
 // --------- Funciones de selección múltiple ---------
 function actualizarControlesSeleccion() {
   const checkboxes = document.querySelectorAll('.selector-alumno:checked');
+  const totalCheckboxes = document.querySelectorAll('.selector-alumno');
   const cantidad = checkboxes.length;
+  const total = totalCheckboxes.length;
   
-  if (cantidad > 0) {
+  // Mostrar controles si hay alumnos cargados
+  if (total > 0) {
     controlesSeleccion.style.display = 'flex';
-    contadorSeleccionados.textContent = `${cantidad} alumno${cantidad > 1 ? 's' : ''} seleccionado${cantidad > 1 ? 's' : ''}`;
+    
+    if (cantidad > 0) {
+      contadorSeleccionados.textContent = `${cantidad} alumno${cantidad > 1 ? 's' : ''} seleccionado${cantidad > 1 ? 's' : ''}`;
+    } else {
+      contadorSeleccionados.textContent = `0 alumnos seleccionados`;
+    }
+    
+    // Actualizar texto del botón según el estado
+    if (cantidad === total) {
+      btnSeleccionarTodos.textContent = "Deseleccionar todos";
+    } else {
+      btnSeleccionarTodos.textContent = "Seleccionar todos";
+    }
   } else {
     controlesSeleccion.style.display = 'none';
   }
@@ -356,6 +372,23 @@ btnSeleccionadosMenos.addEventListener("click", () => {
 btnSeleccionadosReset.addEventListener("click", () => {
   aplicarAccionASeleccionados('reset');
   setEstado("Contadores seleccionados reiniciados a 10.");
+});
+
+btnSeleccionarTodos.addEventListener("click", () => {
+  const checkboxes = document.querySelectorAll('.selector-alumno');
+  const checkedBoxes = document.querySelectorAll('.selector-alumno:checked');
+  
+  // Si todos están seleccionados, deseleccionar todos
+  if (checkedBoxes.length === checkboxes.length) {
+    checkboxes.forEach(cb => cb.checked = false);
+    setEstado("Todos los alumnos deseleccionados.");
+  } else {
+    // Si no todos están seleccionados, seleccionar todos
+    checkboxes.forEach(cb => cb.checked = true);
+    setEstado("Todos los alumnos seleccionados.");
+  }
+  
+  actualizarControlesSeleccion();
 });
 
 // Event listeners para selección múltiple con hold-down
