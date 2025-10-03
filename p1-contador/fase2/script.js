@@ -10,6 +10,7 @@ const btnReset5 = document.getElementById("btn-reset-5");
 const btnReset0 = document.getElementById("btn-reset-0");
 const btnMas = document.getElementById("btn-mas-global");
 const btnMenos = document.getElementById("btn-menos-global");
+const btnSeleccionarTodos = document.getElementById("btn-seleccionar-todos");
 
 
 // --------- Utilidades ---------
@@ -100,31 +101,67 @@ async function cargarDesdeArchivoLocal(file) {
 lista.addEventListener("click", (ev) => {
   const btn = ev.target.closest("button");
   const card = ev.target.closest(".persona");
+  const contador = ev.target.closest(".contador");
 
+  // Si se hace clic en el contador (span), permitir edición directa
+  if (contador && card && !btn) {
+    editarContadorDirectamente(contador, card);
+    return;
+  }
 
   // Si es un botón (+/-/reset individual)
   if (btn && card) {
-    const nombre = card.dataset.nombre;
-    if (!estado.has(nombre)) return;
-    const span = card.querySelector(".contador");
-    let valor = Number(span.dataset.valor || "10");
-
-    if (btn.classList.contains("btn-mas")) valor += 0.1;
-    if (btn.classList.contains("btn-menos")) valor -= 0.1;
-    if (btn.classList.contains("btn-reset-individual")) valor = 10;
-
-    valor = Math.min(10, Math.max(0, parseFloat(valor.toFixed(1))));
-
-    estado.set(nombre, valor);
-    span.dataset.valor = String(valor);
-    span.textContent = valor.toFixed(1);
-    actualizarColor(span, valor);
-    bump(span);
+    const seleccionadas = document.querySelectorAll(".persona.seleccionada");
+    
+    // Si hay seleccionadas (incluyendo la actual si no está seleccionada)
+    let cardsAModificar = [];
+    if (seleccionadas.length > 0) {
+      // Si la card actual no está seleccionada, solo modificar las seleccionadas
+      if (!card.classList.contains("seleccionada")) {
+        cardsAModificar = Array.from(seleccionadas);
+      } else {
+        // Si la card actual está seleccionada, modificar todas las seleccionadas
+        cardsAModificar = Array.from(seleccionadas);
+      }
+    } else {
+      // Si no hay ninguna seleccionada, modificar solo la actual
+      cardsAModificar = [card];
+    }
+    
+    let cambio = 0;
+    let valorReset = null;
+    
+    if (btn.classList.contains("btn-mas")) cambio = 0.1;
+    if (btn.classList.contains("btn-menos")) cambio = -0.1;
+    if (btn.classList.contains("btn-reset-individual")) valorReset = 10;
+    
+    cardsAModificar.forEach(cardModificar => {
+      const nombreMod = cardModificar.dataset.nombre;
+      if (!estado.has(nombreMod)) return;
+      
+      const spanMod = cardModificar.querySelector(".contador");
+      let valorMod = Number(spanMod.dataset.valor || "10");
+      
+      if (valorReset !== null) {
+        valorMod = valorReset;
+      } else {
+        valorMod += cambio;
+      }
+      
+      valorMod = Math.min(10, Math.max(0, parseFloat(valorMod.toFixed(1))));
+      
+      estado.set(nombreMod, valorMod);
+      spanMod.dataset.valor = String(valorMod);
+      spanMod.textContent = valorMod.toFixed(1);
+      actualizarColor(spanMod, valorMod);
+      bump(spanMod);
+    });
+    
     return; // ya procesado, no sigue al siguiente bloque
   }
 
-  // Si no es un botón, manejamos la selección
-  if (card) {
+  // Si no es un botón ni contador, manejamos la selección
+  if (card && !contador) {
     if (ev.ctrlKey || ev.metaKey) {
       card.classList.toggle("seleccionada");
     } else {
@@ -231,30 +268,101 @@ function resetSeleccionadas(valor) {
 
 function actualizarBotonesSeleccion() {
   const seleccionadas = document.querySelectorAll(".persona.seleccionada");
+  const todasLasPersonas = document.querySelectorAll(".persona");
 
-  // Si hay más de una seleccionada => bloquear los botones individuales
-  const deshabilitar = seleccionadas.length > 1;
+  // Actualizar texto del botón seleccionar todos
+  if (seleccionadas.length === todasLasPersonas.length && todasLasPersonas.length > 0) {
+    btnSeleccionarTodos.textContent = "Deseleccionar todos";
+  } else {
+    btnSeleccionarTodos.textContent = "Seleccionar todos";
+  }
 
+  // Los botones individuales siempre están habilitados
+  // Cuando hay múltiples selecciones, afectarán a todas las seleccionadas
   document.querySelectorAll(".persona").forEach(card => {
     const btnMas = card.querySelector(".btn-mas");
     const btnMenos = card.querySelector(".btn-menos");
 
-    if (deshabilitar) {
-      btnMas.disabled = true;
-      btnMenos.disabled = true;
-      btnMas.classList.add("deshabilitado");
-      btnMenos.classList.add("deshabilitado");
-    } else {
-      btnMas.disabled = false;
-      btnMenos.disabled = false;
-      btnMas.classList.remove("deshabilitado");
-      btnMenos.classList.remove("deshabilitado");
-    }
+    btnMas.disabled = false;
+    btnMenos.disabled = false;
+    btnMas.classList.remove("deshabilitado");
+    btnMenos.classList.remove("deshabilitado");
   });
 }
 
 btnMas.addEventListener("click", () => modificarSeleccionadas(0.1));
 btnMenos.addEventListener("click", () => modificarSeleccionadas(-0.1));
+
+// Función para editar contador directamente
+function editarContadorDirectamente(span, card) {
+  const valorActual = parseFloat(span.dataset.valor || "10");
+  const nombre = card.dataset.nombre;
+  
+  // Crear input temporal
+  const input = document.createElement("input");
+  input.type = "number";
+  input.min = "0";
+  input.max = "10";
+  input.step = "0.1";
+  input.value = valorActual.toFixed(1);
+  input.style.width = "4ch";
+  input.style.textAlign = "center";
+  input.style.fontSize = "2.25rem";
+  input.style.border = "2px solid var(--accent)";
+  input.style.borderRadius = "4px";
+  input.style.backgroundColor = "var(--card)";
+  input.style.color = "var(--text)";
+  
+  // Reemplazar span con input temporalmente
+  span.style.display = "none";
+  span.parentNode.insertBefore(input, span);
+  input.focus();
+  input.select();
+  
+  function finalizarEdicion() {
+    let nuevoValor = parseFloat(input.value);
+    
+    // Validar rango
+    if (isNaN(nuevoValor)) nuevoValor = valorActual;
+    nuevoValor = Math.min(10, Math.max(0, parseFloat(nuevoValor.toFixed(1))));
+    
+    // Actualizar estado y UI
+    estado.set(nombre, nuevoValor);
+    span.dataset.valor = String(nuevoValor);
+    span.textContent = nuevoValor.toFixed(1);
+    actualizarColor(span, nuevoValor);
+    bump(span);
+    
+    // Restaurar span
+    input.remove();
+    span.style.display = "";
+  }
+  
+  input.addEventListener("blur", finalizarEdicion);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === "Escape") {
+      finalizarEdicion();
+    }
+  });
+}
+
+// Funcionalidad para seleccionar/deseleccionar todos
+btnSeleccionarTodos.addEventListener("click", () => {
+  const todasLasPersonas = document.querySelectorAll(".persona");
+  const seleccionadas = document.querySelectorAll(".persona.seleccionada");
+  
+  if (seleccionadas.length === todasLasPersonas.length) {
+    // Si todos están seleccionados, deseleccionar todos
+    todasLasPersonas.forEach(card => card.classList.remove("seleccionada"));
+    btnSeleccionarTodos.textContent = "Seleccionar todos";
+  } else {
+    // Si no todos están seleccionados, seleccionar todos
+    todasLasPersonas.forEach(card => card.classList.add("seleccionada"));
+    btnSeleccionarTodos.textContent = "Deseleccionar todos";
+  }
+  
+  actualizarBotonesSeleccion();
+});
 
 const btnTema = document.getElementById("btn-tema");
 
